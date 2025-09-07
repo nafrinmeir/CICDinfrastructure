@@ -1,8 +1,25 @@
 #!/bin/bash
 set -e
 
-echo "[1/12] עדכון מערכת"
-sudo apt-get update -y && sudo apt-get upgrade -y
+# -----------------------------------------------
+# Helper function to safely upgrade system
+# -----------------------------------------------
+safe_upgrade() {
+    echo "[*] Updating package lists..."
+    sudo apt-get update -y
+
+    echo "[*] Trying full upgrade (including linux-firmware)..."
+    if ! sudo apt-get upgrade -y; then
+        echo "[!] Upgrade failed due to linux-firmware. Skipping it..."
+        sudo apt-mark hold linux-firmware
+        sudo apt-get upgrade -y
+        echo "[*] linux-firmware is on hold. You can upgrade it later with:"
+        echo "    sudo apt-mark unhold linux-firmware && sudo apt-get upgrade -y"
+    fi
+}
+
+echo "[1/12] עדכון מערכת והגנה על linux-firmware"
+safe_upgrade
 
 echo "[2/12] התקנת Docker"
 sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common gnupg lsb-release
@@ -24,13 +41,13 @@ docker-compose --version
 echo "[4/12] התקנת Kubernetes (kubeadm / kubelet / kubectl)"
 # הסרת ריפו ישן אם קיים
 sudo rm -f /etc/apt/sources.list.d/kubernetes.list
+sudo rm -f /etc/apt/keyrings/kubernetes-apt-keyring.gpg
 
-# הורדת המפתח הרשמי החדש
+# הוספת מפתח רשמי ו-repo חדש
 sudo mkdir -p /etc/apt/keyrings
 curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.30/deb/Release.key \
   | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
 
-# הוספת ה־repo
 echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] \
 https://pkgs.k8s.io/core:/stable:/v1.30/deb/ /" \
   | sudo tee /etc/apt/sources.list.d/kubernetes.list
