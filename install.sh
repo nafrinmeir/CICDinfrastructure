@@ -22,11 +22,19 @@ sudo chmod +x /usr/local/bin/docker-compose
 docker-compose --version
 
 echo "[4/12] התקנת Kubernetes (kubeadm / kubelet / kubectl)"
-sudo apt-get update -y
-sudo apt-get install -y apt-transport-https ca-certificates curl
-sudo curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://pkgs.k8s.io/core:/stable:/v1.30/deb/Release.key
-echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.30/deb/ /" \
+# הסרת ריפו ישן אם קיים
+sudo rm -f /etc/apt/sources.list.d/kubernetes.list
+
+# הורדת המפתח הרשמי החדש
+sudo mkdir -p /etc/apt/keyrings
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.30/deb/Release.key \
+  | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+# הוספת ה־repo
+echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] \
+https://pkgs.k8s.io/core:/stable:/v1.30/deb/ /" \
   | sudo tee /etc/apt/sources.list.d/kubernetes.list
+
 sudo apt-get update -y
 sudo apt-get install -y kubelet kubeadm kubectl
 sudo apt-mark hold kubelet kubeadm kubectl
